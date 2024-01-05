@@ -18,7 +18,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
   List<Widget> lstScreen = [
     const DashboardView(),
     const AddCourseView(),
-    const AddBatchView(),
+    AddBatchView(),
     const ProfileView(),
   ];
   @override

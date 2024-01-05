@@ -3,6 +3,8 @@ import 'package:student_management_hive_api/config/constants/hive_table_constant
 import 'package:student_management_hive_api/features/batch/domain/entity/batch_entity.dart';
 import 'package:uuid/uuid.dart';
 
+part 'batch_hive_model.g.dart';
+
 @HiveType(typeId: HiveTableConstant.batchTableId)
 class BatchHiveModel {
   @HiveField(0)
@@ -19,16 +21,15 @@ class BatchHiveModel {
     required this.batchName,
   }) : batchId = batchId ?? const Uuid().v4();
 
-  // Convert Hive Object to Entity
-  BatchEntity toEntity() => BatchEntity(
-        batchId: batchId,
-        batchName: batchName,
+// Convert Entity to Hive Object
+  factory BatchHiveModel.toHiveModel(BatchEntity entity) => BatchHiveModel(
+        batchName: entity.batchName,
       );
 
-  // Convert Entity to Hive Object
-  BatchHiveModel toHiveModel(BatchEntity entity) => BatchHiveModel(
-        // batchId: entity.batchId,
-        batchName: entity.batchName,
+  // Convert Hive Object to Entity
+  static BatchEntity toEntity(BatchHiveModel hiveModel) => BatchEntity(
+        batchId: hiveModel.batchId,
+        batchName: '${hiveModel.batchName}b',
       );
 
   @override

@@ -1,8 +1,16 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:student_management_hive_api/core/failure/failure.dart';
 import 'package:student_management_hive_api/features/course/data/data_source/course_local_data_source.dart';
 import 'package:student_management_hive_api/features/course/domain/entity/course_entity.dart';
 import 'package:student_management_hive_api/features/course/domain/repository/course_repository.dart';
+
+final courseLocalRepositoryProvider = Provider.autoDispose<ICourseRepository>(
+  (ref) => CourseLocalRepositoryImpl(
+    courseLocalDataSource: ref.read(courseLocalDatasourceProvider),
+  ),
+);
+
 
 class CourseLocalRepositoryImpl implements ICourseRepository {
   final CourseLocalDataSource courseLocalDataSource;

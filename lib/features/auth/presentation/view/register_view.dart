@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
+import 'package:multi_select_flutter/util/multi_select_item.dart';
+import 'package:multi_select_flutter/util/multi_select_list_type.dart';
+import 'package:student_management_hive_api/core/common/provider/is_network_provider.dart';
+import 'package:student_management_hive_api/core/common/snackbar/my_snackbar.dart';
+import 'package:student_management_hive_api/features/batch/domain/entity/batch_entity.dart';
+import 'package:student_management_hive_api/features/batch/presentation/viewmodel/batch_view_model.dart';
+import 'package:student_management_hive_api/features/course/domain/entity/course_entity.dart';
+import 'package:student_management_hive_api/features/course/presentation/view_model/course_view_model.dart';
 
 class RegisterView extends ConsumerStatefulWidget {
   const RegisterView({super.key});
@@ -18,15 +27,41 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
   final _usernameController = TextEditingController(text: 'kiran');
   final _passwordController = TextEditingController(text: 'kiran123');
 
+  bool isObscure = true;
+
+  BatchEntity? selectedBatch;
+  final List<CourseEntity> _lstCourseSelected = [];
+
   // final _fnameController = TextEditingController();
   // final _lnameController = TextEditingController();
   // final _phoneController = TextEditingController();
   // final _usernameController = TextEditingController();
   // final _passwordController = TextEditingController();
 
-  bool isObscure = true;
   @override
   Widget build(BuildContext context) {
+    final batchState = ref.watch(batchViewModelProvider);
+    final courseState = ref.watch(courseViewModelProvider);
+    final isConnected = ref.watch(connectivityStatusProvider);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isConnected == ConnectivityStatus.isDisconnected){
+        showSnackBar(message: "No internet Connection", context: context, color: Colors.red);
+
+      }else if (isConnected == ConnectivityStatus.isConnected){
+        showSnackBar(message: "Your are online", context: context);
+      }
+    
+      if (batchState.showMessage) {
+        showSnackBar(message: 'Batch Added', context: context);
+        ref.read(batchViewModelProvider.notifier).resetMessage(false);
+      }
+      if (courseState.showMessage) {
+        showSnackBar(message: 'Course Added', context: context);
+        ref.read(courseViewModelProvider.notifier).resetMessage(false);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Register'),
@@ -126,8 +161,57 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
                   ),
                   _gap,
                   // DropDown
+                  batchState.isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(),
+                        )
+                      : DropdownButtonFormField(
+                          items: batchState.batches
+                              .map((e) => DropdownMenuItem<BatchEntity>(
+                                  value: e, child: Text(e.batchName)))
+                              .toList(),
+                          onChanged: (value) {
+                            selectedBatch = value;
+                          },
+                          decoration:
+                              const InputDecoration(labelText: "Select batch"),
+                        ),
                   _gap,
                   // Multi Checkbox
+                  courseState.isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(),
+                        )
+                      : MultiSelectDialogField(
+                          title: const Text('Select course(s)'),
+                          items: courseState.courses
+                              .map(
+                                (course) => MultiSelectItem(
+                                  course,
+                                  course.courseName,
+                                ),
+                              )
+                              .toList(),
+                          listType: MultiSelectListType.CHIP,
+                          buttonText: const Text('Select course(s)'),
+                          buttonIcon: const Icon(Icons.search),
+                          onConfirm: (values) {
+                            _lstCourseSelected.clear();
+                            _lstCourseSelected.addAll(values);
+                          },
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.grey,
+                            ),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          validator: ((value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select courses';
+                            }
+                            return null;
+                          }),
+                        ),
                   _gap,
                   TextFormField(
                     controller: _usernameController,
@@ -169,7 +253,9 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
 
                   ElevatedButton(
                     onPressed: () {
-                      if (_key.currentState!.validate()) {}
+                      if (_key.currentState!.validate()) {
+
+                      }
                     },
                     child: const Text('Register'),
                   ),
