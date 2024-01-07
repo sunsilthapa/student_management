@@ -24,7 +24,7 @@ class HttpService {
           requestHeader: true, requestBody: true, responseHeader: true))
       ..options.headers = {
         'Accept': 'application/json',
-        'Content-Type': 'application/jso  q n',
+        'Content-Type': 'application/json',
       };
   }
 }

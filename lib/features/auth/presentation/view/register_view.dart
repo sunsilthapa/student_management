@@ -1,8 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
-import 'package:multi_select_flutter/util/multi_select_item.dart';
-import 'package:multi_select_flutter/util/multi_select_list_type.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:multi_select_flutter/multi_select_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:student_management_hive_api/core/common/provider/is_network_provider.dart';
 import 'package:student_management_hive_api/core/common/snackbar/my_snackbar.dart';
 import 'package:student_management_hive_api/features/batch/domain/entity/batch_entity.dart';
@@ -14,7 +16,7 @@ class RegisterView extends ConsumerStatefulWidget {
   const RegisterView({super.key});
 
   @override
-  ConsumerState<RegisterView> createState() => _RegisterViewState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _RegisterViewState();
 }
 
 class _RegisterViewState extends ConsumerState<RegisterView> {
@@ -32,34 +34,49 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
   BatchEntity? selectedBatch;
   final List<CourseEntity> _lstCourseSelected = [];
 
-  // final _fnameController = TextEditingController();
-  // final _lnameController = TextEditingController();
-  // final _phoneController = TextEditingController();
-  // final _usernameController = TextEditingController();
-  // final _passwordController = TextEditingController();
+  // Check for the camera permission
+  checkCameraPermission() async {
+    if (await Permission.camera.request().isRestricted ||
+        await Permission.camera.request().isDenied) {
+      await Permission.camera.request();
+    }
+  }
+
+  File? _img;
+  Future _browseImage(ImageSource imageSource) async {
+    try {
+      final image = await ImagePicker().pickImage(source: imageSource);
+      if (image != null) {
+        _img = File(image.path);
+        //ref.read(authViewModelProvider.notifier).uploadImage(_img!);
+      } else {
+        return;
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final batchState = ref.watch(batchViewModelProvider);
     final courseState = ref.watch(courseViewModelProvider);
     final isConnected = ref.watch(connectivityStatusProvider);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isConnected == ConnectivityStatus.isDisconnected){
-        showSnackBar(message: "No internet Connection", context: context, color: Colors.red);
+      // if (isConnected == ConnectivityStatus.isDisconnected) {
+      //   showSnackBar(
+      //       message: 'No Internet Connection',
+      //       context: context,
+      //       color: Colors.red);
+      // } else if (isConnected == ConnectivityStatus.isConnected) {
+      //   showSnackBar(message: 'You are online', context: context);
+      // }
 
-      }else if (isConnected == ConnectivityStatus.isConnected){
-        showSnackBar(message: "Your are online", context: context);
-      }
-    
-      if (batchState.showMessage) {
-        showSnackBar(message: 'Batch Added', context: context);
-        ref.read(batchViewModelProvider.notifier).resetMessage(false);
-      }
-      if (courseState.showMessage) {
-        showSnackBar(message: 'Course Added', context: context);
-        ref.read(courseViewModelProvider.notifier).resetMessage(false);
-      }
+      // if (ref.watch(authViewModelProvider).showMessage!) {
+      //   showSnackBar(
+      //       message: 'Student Registerd Successfully', context: context);
+      //   ref.read(authViewModelProvider.notifier).resetMessage(false);
+      // }
     });
 
     return Scaffold(
@@ -92,12 +109,19 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               ElevatedButton.icon(
-                                onPressed: () {},
+                                onPressed: () {
+                                  checkCameraPermission();
+                                  _browseImage(ImageSource.camera);
+                                  Navigator.pop(context);
+                                },
                                 icon: const Icon(Icons.camera),
                                 label: const Text('Camera'),
                               ),
                               ElevatedButton.icon(
-                                onPressed: () {},
+                                onPressed: () {
+                                  _browseImage(ImageSource.gallery);
+                                  Navigator.pop(context);
+                                },
                                 icon: const Icon(Icons.image),
                                 label: const Text('Gallery'),
                               ),
@@ -106,17 +130,17 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
                         ),
                       );
                     },
-                    child: const SizedBox(
+                    child: SizedBox(
                       height: 200,
                       width: 200,
                       child: CircleAvatar(
                         radius: 50,
-                        backgroundImage:
-                            AssetImage('assets/images/profile.png'),
-                        // backgroundImage: _img != null
-                        //     ? FileImage(_img!)
-                        //     : const AssetImage('assets/images/profile.png')
-                        //         as ImageProvider,
+                        // backgroundImage:
+                        //     AssetImage('assets/images/profile.png'),
+                        backgroundImage: _img != null
+                            ? FileImage(_img!)
+                            : const AssetImage('assets/images/profile.png')
+                                as ImageProvider,
                       ),
                     ),
                   ),
@@ -145,7 +169,7 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
                       }
                       return null;
                     }),
-                  ),
+                    ),
                   _gap,
                   TextFormField(
                     controller: _phoneController,
@@ -160,24 +184,26 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
                     }),
                   ),
                   _gap,
-                  // DropDown
                   batchState.isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(),
-                        )
+                      ? const Center(child: CircularProgressIndicator())
                       : DropdownButtonFormField(
+                          hint: const Text('Select batch'),
                           items: batchState.batches
-                              .map((e) => DropdownMenuItem<BatchEntity>(
-                                  value: e, child: Text(e.batchName)))
+                              .map(
+                                (batch) => DropdownMenuItem<BatchEntity>(
+                                  value: batch,
+                                  child: Text(batch.batchName),
+                                ),
+                              )
                               .toList(),
                           onChanged: (value) {
                             selectedBatch = value;
                           },
-                          decoration:
-                              const InputDecoration(labelText: "Select batch"),
+                          decoration: const InputDecoration(
+                            labelText: 'Select Batch',
+                          ),
                         ),
                   _gap,
-                  // Multi Checkbox
                   courseState.isLoading
                       ? const Center(
                           child: CircularProgressIndicator(),
@@ -250,14 +276,28 @@ class _RegisterViewState extends ConsumerState<RegisterView> {
                     }),
                   ),
                   _gap,
-
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_key.currentState!.validate()) {
-
-                      }
-                    },
-                    child: const Text('Register'),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // if (_key.currentState!.validate()) {
+                        //   final entity = AuthEntity(
+                        //     fname: _fnameController.text,
+                        //     lname: _lnameController.text,
+                        //     phone: _phoneController.text,
+                        //     batch: selectedBatch!,
+                        //     courses: _lstCourseSelected,
+                        //     username: _usernameController.text,s
+                        //     password: _passwordController.text,
+                        //   );
+                        //   // Register user
+                        //   ref
+                        //       .read(authViewModelProvider.notifier)
+                        //       .registerStudent(entity);
+                        // }
+                      },
+                      child: const Text('Register'),
+                    ),
                   ),
                 ],
               ),
